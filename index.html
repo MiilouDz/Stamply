@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Stamply For Ecommerce</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@400;600;700;800&family=Cairo:wght@400;600;700;900&family=Amiri:wght@400;700&family=Tajawal:wght@400;500;700;800&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<style>
+/* ── THEME VARS ── */
+:root{
+  --bg:#111215;--surface:#17191e;--card:#1e2028;--border:#2e313a;
+  --accent:#f5c842;--red:#e83b2a;--text:#eceaf4;--muted:#656880;
+  --input-bg:#0e0f12;--shadow:rgba(0,0,0,.4);--r:10px;
+}
+body.light{
+  --bg:#f0f0f4;--surface:#ffffff;--card:#f7f7fa;--border:#d4d4de;
+  --text:#1a1a2e;--muted:#7070a0;--input-bg:#ffffff;--shadow:rgba(0,0,0,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:'Barlow Condensed',sans-serif;min-height:100vh;transition:background .25s,color .25s}
+body.ar{font-family:'Cairo',sans-serif}
+
+/* ── HEADER ── */
+header{
+  padding:12px 22px;display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid var(--border);flex-wrap:wrap;
+  background:var(--surface);position:sticky;top:0;z-index:10;
+  box-shadow:0 1px 8px var(--shadow);
+}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:1.65rem;letter-spacing:.05em;color:var(--accent);line-height:1}
+.logo em{color:var(--red);font-style:normal}
+body.ar .logo{font-family:'Cairo',sans-serif;font-weight:900;letter-spacing:0;font-size:1.4rem}
+.header-sub{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted)}
+body.ar .header-sub{font-family:'Cairo',sans-serif;font-size:.75rem}
+.hcontrols{margin-left:auto;display:flex;align-items:center;gap:8px}
+body.ar .hcontrols{margin-left:0;margin-right:auto}
+
+/* theme + lang toggles */
+.toggle-group{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.tg-btn{padding:6px 13px;font-size:.78rem;cursor:pointer;background:transparent;border:none;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-weight:600;transition:all .15s;white-space:nowrap}
+.tg-btn.ar-label{font-family:'Cairo',sans-serif;font-size:.82rem}
+.tg-btn.active{background:var(--accent);color:#000}
+.tg-btn:hover:not(.active){color:var(--text);background:var(--card)}
+.theme-btn{padding:6px 11px;font-size:1rem;line-height:1}
+
+/* ── WORKSPACE ── */
+.workspace{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 52px)}
+body.ar .workspace{direction:rtl}
+.panel{
+  background:var(--surface);border-right:1px solid var(--border);
+  padding:14px 13px;display:flex;flex-direction:column;gap:14px;
+  overflow-y:auto;max-height:calc(100vh - 52px);
+}
+body.ar .panel{border-right:none;border-left:1px solid var(--border)}
+.stage{padding:18px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+
+/* ── SECTIONS ── */
+.sec{
+  font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.14em;margin-bottom:7px;
+  display:flex;align-items:center;gap:8px;
+}
+.sec::after{content:'';flex:1;height:1px;background:var(--border)}
+body.ar .sec{font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700;text-transform:none;letter-spacing:0;flex-direction:row-reverse}
+body.ar .sec::after{order:-1}
+.fl{font-size:.74rem;color:var(--muted);margin-bottom:4px;display:block}
+body.ar .fl{font-family:'Cairo',sans-serif;font-size:.8rem}
+
+/* ── INPUTS ── */
+input[type=text],input[type=number]{
+  background:var(--input-bg);border:1px solid var(--border);border-radius:7px;
+  padding:8px 10px;color:var(--text);font-family:'Barlow Condensed',sans-serif;
+  font-size:.95rem;font-weight:700;outline:none;transition:border-color .2s,background .25s,color .25s;
+  width:100%;
+}
+input[type=text]:focus,input[type=number]:focus{border-color:var(--accent)}
+body.ar input[type=text]{text-align:right;font-family:'Cairo',sans-serif}
+#lt{font-family:'Barlow Condensed',sans-serif}
+input[type=number]{-moz-appearance:textfield;text-align:center;padding:7px 6px;width:100%}
+input[type=number]::-webkit-inner-spin-button{opacity:.5}
+
+/* ── PILLS ── */
+.pills{display:flex;flex-wrap:wrap;gap:5px}
+body.ar .pills{flex-direction:row-reverse}
+.pill{
+  background:var(--input-bg);border:1px solid var(--border);border-radius:6px;
+  padding:4px 9px;font-size:.75rem;cursor:pointer;color:var(--muted);
+  transition:all .15s;white-space:nowrap;
+}
+.pill:hover{border-color:var(--text);color:var(--text)}
+.pill.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}
+body.ar .pill{font-family:'Cairo',sans-serif;font-size:.8rem}
+
+/* ── STYLE CARDS ── */
+.sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.sc{
+  background:var(--input-bg);border:2px solid var(--border);border-radius:8px;
+  padding:7px 4px 5px;cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;gap:4px;transition:all .15s;
+}
+.sc:hover{border-color:var(--muted)}
+.sc.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.sp{width:52px;height:26px;display:flex;align-items:center;justify-content:center}
+.sp canvas{max-width:52px;max-height:26px;display:block}
+.sn{font-size:.6rem;font-family:'Space Mono',monospace;color:var(--muted);text-align:center}
+.sc.on .sn{color:var(--accent)}
+body.ar .sn{font-family:'Cairo',sans-serif;font-size:.72rem}
+
+/* ── FONT GRID ── */
+.font-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.fc{
+  background:var(--input-bg);border:2px solid var(--border);border-radius:7px;
+  padding:7px 9px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;gap:2px;
+}
+.fc:hover{border-color:var(--muted)}
+.fc.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.fp{font-size:1rem;color:var(--text);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fn{font-size:.57rem;font-family:'Space Mono',monospace;color:var(--muted)}
+.fc.on .fn{color:var(--accent)}
+body.ar .fn{font-family:'Cairo',sans-serif;font-size:.66rem}
+
+/* ── COLORS ── */
+.crow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+body.ar .crow{flex-direction:row-reverse}
+.sw{width:26px;height:26px;border-radius:5px;cursor:pointer;border:2px solid transparent;transition:transform .15s,border-color .15s;flex-shrink:0}
+.sw:hover{transform:scale(1.15)}
+.sw.on{border-color:var(--accent)}
+.cw{position:relative;width:26px;height:26px;flex-shrink:0}
+.cw input{opacity:0;position:absolute;inset:0;cursor:pointer;width:100%;height:100%}
+.cs{width:26px;height:26px;border-radius:5px;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);pointer-events:none;border:2px solid transparent}
+.cw.on .cs{border-color:var(--accent)}
+
+/* ── SLIDER ── */
+.sr{display:flex;align-items:center;gap:8px}
+body.ar .sr{flex-direction:row-reverse}
+input[type=range]{flex:1;accent-color:var(--accent)}
+.vt{font-family:'Space Mono',monospace;font-size:.68rem;min-width:32px;text-align:right;color:var(--text)}
+body.ar .vt{text-align:left}
+
+/* ── DROPZONE ── */
+.dz{
+  border:2px dashed var(--border);border-radius:var(--r);padding:15px;
+  text-align:center;cursor:pointer;transition:all .2s;position:relative;
+}
+.dz:hover,.dz.over{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 5%,transparent)}
+.dz input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.dz h3{font-size:.92rem;font-weight:700}
+.dz p{font-size:.68rem;color:var(--muted);font-family:'Space Mono',monospace;margin-top:3px}
+body.ar .dz h3,body.ar .dz p{font-family:'Cairo',sans-serif}
+
+/* ── CHIPS ── */
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.chip{background:var(--input-bg);border:1px solid var(--border);border-radius:5px;padding:3px 7px;font-size:.67rem;font-family:'Space Mono',monospace;display:flex;align-items:center;gap:4px}
+.chip .x{color:var(--red);cursor:pointer;font-weight:700}
+
+/* ── POSITION CONTROLS ── */
+.pos-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;align-items:end}
+.pos-field{display:flex;flex-direction:column;gap:4px}
+.pos-field label{font-size:.7rem;color:var(--muted);text-align:center}
+body.ar .pos-field label{font-family:'Cairo',sans-serif;font-size:.75rem}
+.num-row{display:flex;align-items:center;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--input-bg)}
+.num-row input[type=number]{border:none;border-radius:0;background:transparent;font-size:.9rem;padding:7px 4px;min-width:0}
+.num-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;padding:0 7px;font-size:1.1rem;line-height:1;transition:color .15s;flex-shrink:0;height:100%;display:flex;align-items:center}
+.num-btn:hover{color:var(--accent)}
+.quick-pos{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:8px}
+.qp-btn{
+  background:var(--input-bg);border:1px solid var(--border);border-radius:6px;
+  padding:6px 2px;font-size:.62rem;font-family:'Space Mono',monospace;
+  color:var(--muted);cursor:pointer;text-align:center;transition:all .15s;
+}
+.qp-btn:hover{border-color:var(--accent);color:var(--accent)}
+body.ar .qp-btn{font-family:'Cairo',sans-serif;font-size:.68rem}
+
+/* ── CANVAS AREA ── */
+.hint{font-family:'Space Mono',monospace;font-size:.68rem;color:var(--muted);text-align:center;padding:4px 0}
+.hint b{color:var(--accent)}
+body.ar .hint{font-family:'Cairo',sans-serif;font-size:.78rem}
+/* The container gets cursor and mouse events */
+#co{
+  position:relative;display:inline-block;
+  border:2px solid var(--border);border-radius:var(--r);
+  overflow:hidden;cursor:crosshair;align-self:flex-start;
+  transition:border-color .2s;max-width:100%;
+}
+#co:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--border))}
+#co.dragging{cursor:grabbing;border-color:var(--accent)}
+#bc{display:block;max-width:100%}
+/* overlay is purely visual, NO pointer-events */
+#oc{position:absolute;top:0;left:0;pointer-events:none;max-width:100%}
+
+/* ── PAGE STRIP ── */
+#strip{display:flex;gap:7px;flex-wrap:wrap}
+body.ar #strip{flex-direction:row-reverse}
+.pt{border:2px solid var(--border);border-radius:6px;overflow:hidden;cursor:pointer;transition:border-color .15s;position:relative}
+.pt:hover{border-color:var(--muted)}
+.pt.on{border-color:var(--accent)}
+.pt canvas{display:block}
+.pn{position:absolute;bottom:2px;right:4px;font-size:.57rem;font-family:'Space Mono',monospace;color:#fff;text-shadow:0 0 3px #000}
+body.ar .pn{right:auto;left:4px}
+
+/* ── ACTION BAR ── */
+.abar{display:flex;gap:9px;align-items:center;padding-top:6px;flex-wrap:wrap}
+body.ar .abar{flex-direction:row-reverse}
+.bdl{
+  background:var(--accent);color:#000;border:none;border-radius:7px;
+  padding:11px 24px;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;
+  letter-spacing:.06em;cursor:pointer;transition:opacity .2s,transform .15s;
+}
+.bdl:hover{opacity:.85;transform:translateY(-1px)}
+.bdl:disabled{opacity:.35;cursor:not-allowed;transform:none}
+body.ar .bdl{font-family:'Cairo',sans-serif;font-weight:800;letter-spacing:0;font-size:.95rem}
+.bsc{
+  background:transparent;color:var(--muted);border:1px solid var(--border);
+  border-radius:7px;padding:10px 14px;font-family:'Barlow Condensed',sans-serif;
+  font-size:.9rem;cursor:pointer;transition:all .2s;
+}
+.bsc:hover{border-color:var(--text);color:var(--text)}
+body.ar .bsc{font-family:'Cairo',sans-serif;font-size:.9rem}
+#stat{font-family:'Space Mono',monospace;font-size:.68rem;color:var(--accent);margin-left:auto}
+body.ar #stat{margin-left:0;margin-right:auto;font-family:'Cairo',sans-serif}
+#stat.err{color:var(--red)}
+
+/* ── CF ROW ── */
+.cf-row{display:flex;gap:5px;margin-top:8px}
+body.ar .cf-row{flex-direction:row-reverse}
+
+/* scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+@media(max-width:700px){
+  .workspace{grid-template-columns:1fr}
+  body.ar .workspace{grid-template-columns:1fr}
+  .panel{max-height:none;border-right:none;border-left:none;border-bottom:1px solid var(--border)}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo" id="logo-txt">PDF <em>Label</em> Stamper</div>
+  <span class="header-sub" id="hdr-sub">drag to place · 6 styles · multi-format</span>
+  <div class="hcontrols">
+    <!-- Theme toggle -->
+    <div class="toggle-group">
+      <button class="tg-btn theme-btn active" id="btn-dark"  onclick="setTheme('dark')"  title="Dark">🌙</button>
+      <button class="tg-btn theme-btn"         id="btn-light" onclick="setTheme('light')" title="Light">☀️</button>
+    </div>
+    <!-- Lang toggle -->
+    <div class="toggle-group">
+      <button class="tg-btn active"   id="btn-en" onclick="setLang('en')">EN</button>
+      <button class="tg-btn ar-label" id="btn-ar" onclick="setLang('ar')">عربي</button>
+    </div>
+  </div>
+</header>
+
+<div class="workspace">
+
+<!-- ══════════════ PANEL ══════════════ -->
+<div class="panel">
+
+  <!-- FILES -->
+  <div>
+    <div class="sec" data-i="sec_files">PDF Files</div>
+    <div class="dz" id="dz">
+      <input type="file" id="fi" accept="application/pdf" multiple/>
+      <h3 data-i="drop_title">Drop PDFs here</h3>
+      <p data-i="drop_sub">or click to browse</p>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <!-- FORMAT -->
+  <div>
+    <div class="sec" data-i="sec_format">Page Format</div>
+    <div class="pills" id="fmts">
+      <div class="pill on" data-f="150x100">150×100mm</div>
+      <div class="pill" data-f="A4">A4</div>
+      <div class="pill" data-f="A5">A5</div>
+      <div class="pill" data-f="Letter">Letter</div>
+      <div class="pill" data-f="A6">A6</div>
+      <div class="pill" data-f="custom" data-i="custom_pill">Custom…</div>
+    </div>
+    <div id="cfmt" style="display:none">
+      <div class="cf-row" style="margin-top:8px">
+        <input type="text" id="cfw" style="width:74px" placeholder="W mm"/>
+        <input type="text" id="cfh" style="width:74px" placeholder="H mm"/>
+        <button class="bsc" id="apcf" style="padding:7px 10px;font-size:.82rem" data-i="ok_btn">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LABEL TEXT -->
+  <div>
+    <div class="sec" data-i="sec_label">Label Text</div>
+    <label class="fl" data-i="lbl_text">Text to stamp</label>
+    <input type="text" id="lt" value="PRIVATE ORDER"/>
+    <div style="margin-top:9px">
+      <label class="fl" data-i="lbl_fontsize">Font size (pt)</label>
+      <div class="sr">
+        <input type="range" id="fs" min="5" max="30" value="11"/>
+        <span class="vt" id="fsv">11</span>
+      </div>
+    </div>
+    <div style="margin-top:9px">
+      <label class="fl" data-i="lbl_opacity">Opacity</label>
+      <div class="sr">
+        <input type="range" id="op" min="10" max="100" value="100" style="accent-color:var(--red)"/>
+        <span class="vt" id="opv">100%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FONT -->
+  <div>
+    <div class="sec" data-i="sec_font">Label Font</div>
+    <div class="font-grid" id="font-grid"></div>
+  </div>
+
+  <!-- STYLE -->
+  <div>
+    <div class="sec" data-i="sec_style">Stamp Style</div>
+    <div class="sgrid" id="sg"></div>
+  </div>
+
+  <!-- COLORS -->
+  <div>
+    <div class="sec" data-i="sec_rectcol">Rectangle Color</div>
+    <div class="crow" id="rcr"></div>
+  </div>
+  <div>
+    <div class="sec" data-i="sec_textcol">Text Color</div>
+    <div class="crow" id="tcr"></div>
+  </div>
+  <div>
+    <div class="sec" data-i="sec_bordcol">Border / Effect Color</div>
+    <div class="crow" id="bcr"></div>
+  </div>
+
+</div><!-- /panel -->
+
+<!-- ══════════════ STAGE ══════════════ -->
+<div class="stage">
+
+  <p class="hint"><b>👆</b> <span data-i="hint">Click or drag on the preview to place the label</span></p>
+
+  <!-- POSITION CONTROLS -->
+  <div>
+    <div class="sec" data-i="sec_pos">Label Position</div>
+    <div class="pos-grid">
+      <!-- X -->
+      <div class="pos-field">
+        <label data-i="lbl_x">X (mm)</label>
+        <div class="num-row">
+          <button class="num-btn" id="x-dec">−</button>
+          <input type="number" id="inp-x" value="0" min="0" step="1"/>
+          <button class="num-btn" id="x-inc">+</button>
+        </div>
+      </div>
+      <!-- Y -->
+      <div class="pos-field">
+        <label data-i="lbl_y">Y (mm)</label>
+        <div class="num-row">
+          <button class="num-btn" id="y-dec">−</button>
+          <input type="number" id="inp-y" value="0" min="0" step="1"/>
+          <button class="num-btn" id="y-inc">+</button>
+        </div>
+      </div>
+      <!-- Rotation -->
+      <div class="pos-field">
+        <label data-i="lbl_rot">Rotation °</label>
+        <div class="num-row">
+          <button class="num-btn" id="r-dec">−</button>
+          <input type="number" id="inp-r" value="0" min="-180" max="180" step="5"/>
+          <button class="num-btn" id="r-inc">+</button>
+        </div>
+      </div>
+    </div>
+    <!-- Quick position buttons -->
+    <div class="quick-pos" id="qpos"></div>
+  </div>
+
+  <!-- CANVAS -->
+  <div id="co">
+    <canvas id="bc"></canvas>
+    <canvas id="oc"></canvas>
+  </div>
+
+  <!-- PAGE STRIP -->
+  <div>
+    <div class="sec" style="margin-bottom:9px" data-i="sec_pages">All Pages</div>
+    <div id="strip"></div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="abar">
+    <button class="bsc" id="clr" data-i="btn_clear">Clear all</button>
+    <button class="bdl" id="dlb" disabled data-i="btn_dl">⬇ Download Stamped PDF</button>
+    <span id="stat"></span>
+  </div>
+
+</div>
+</div><!-- /workspace -->
+
+<script>
+'use strict';
+// ════════════════════════════════════════════════
+//  i18n
+// ════════════════════════════════════════════════
+const I18N={
+  en:{
+    sec_files:'PDF Files',drop_title:'Drop PDFs here',drop_sub:'or click to browse',
+    sec_format:'Page Format',custom_pill:'Custom…',ok_btn:'OK',
+    sec_label:'Label Text',lbl_text:'Text to stamp',lbl_fontsize:'Font size (pt)',lbl_opacity:'Opacity',
+    sec_font:'Label Font',sec_style:'Stamp Style',
+    sec_rectcol:'Rectangle Color',sec_textcol:'Text Color',sec_bordcol:'Border / Effect Color',
+    sec_pos:'Label Position',lbl_x:'X (mm)',lbl_y:'Y (mm)',lbl_rot:'Rotation °',
+    sec_pages:'All Pages',
+    hint:'Click or drag on the preview to place the label',
+    btn_clear:'Clear all',btn_dl:'⬇ Download Stamped PDF',
+    logo:'PDF <em>Label</em> Stamper',hdr_sub:'drag to place · 6 styles · multi-format',
+    style_solid:'Solid',style_outline:'Outline',style_double:'Double',
+    style_stamp:'Stamp',style_grunge:'Grunge',style_ribbon:'Ribbon',
+    qp_tl:'↖ Top Left',qp_tc:'↑ Top',qp_tr:'↗ Top Right',
+    qp_ml:'← Mid Left',qp_mc:'⊙ Center',qp_mr:'→ Mid Right',
+    qp_bl:'↙ Bot Left',qp_bc:'↓ Bottom',qp_br:'↘ Bot Right',
+    st_stamp:'Stamping…',st_done:'✓ Downloaded!',st_empty:'⚠ Empty label',
+  },
+  ar:{
+    sec_files:'ملفات PDF',drop_title:'أفلت الملفات هنا',drop_sub:'أو انقر للاستعراض',
+    sec_format:'حجم الصفحة',custom_pill:'مخصص…',ok_btn:'تطبيق',
+    sec_label:'نص الختم',lbl_text:'النص المراد ختمه',lbl_fontsize:'حجم الخط (pt)',lbl_opacity:'الشفافية',
+    sec_font:'خط التسمية',sec_style:'نمط الختم',
+    sec_rectcol:'لون المستطيل',sec_textcol:'لون النص',sec_bordcol:'لون الحدود',
+    sec_pos:'موضع التسمية',lbl_x:'المحور X (mm)',lbl_y:'المحور Y (mm)',lbl_rot:'الدوران °',
+    sec_pages:'جميع الصفحات',
+    hint:'انقر أو اسحب على المعاينة لوضع التسمية',
+    btn_clear:'مسح الكل',btn_dl:'⬇ تنزيل PDF المختوم',
+    logo:'طابع <em>التسمية</em> PDF',hdr_sub:'اسحب للتموضع · 6 أنماط · متعدد الأحجام',
+    style_solid:'صلب',style_outline:'إطار',style_double:'مزدوج',
+    style_stamp:'ختم',style_grunge:'خشن',style_ribbon:'شريط',
+    qp_tl:'↖ يسار أعلى',qp_tc:'↑ وسط أعلى',qp_tr:'↗ يمين أعلى',
+    qp_ml:'← يسار وسط',qp_mc:'⊙ المركز',qp_mr:'→ يمين وسط',
+    qp_bl:'↙ يسار أسفل',qp_bc:'↓ وسط أسفل',qp_br:'↘ يمين أسفل',
+    st_stamp:'جارٍ الختم…',st_done:'✓ تم التنزيل!',st_empty:'⚠ النص فارغ',
+  }
+};
+let LANG='en';
+function t(k){return(I18N[LANG]||I18N.en)[k]||k;}
+
+function applyI18n(){
+  const isAr=LANG==='ar';
+  document.documentElement.lang=LANG;
+  document.documentElement.dir=isAr?'rtl':'ltr';
+  document.body.classList.toggle('ar',isAr);
+  document.getElementById('btn-en').classList.toggle('active',!isAr);
+  document.getElementById('btn-ar').classList.toggle('active',isAr);
+  document.getElementById('logo-txt').innerHTML=t('logo');
+  document.getElementById('hdr-sub').textContent=t('hdr_sub');
+  document.querySelectorAll('[data-i]').forEach(el=>{
+    const k=el.dataset.i;if(k)el.textContent=t(k);
+  });
+  // default label text swap
+  const ltEl=document.getElementById('lt');
+  if(isAr&&ltEl.value==='PRIVATE ORDER')ltEl.value='طلب خاص';
+  if(!isAr&&ltEl.value==='طلب خاص')ltEl.value='PRIVATE ORDER';
+  const fobj=FONTS.find(f=>f.id===S.labelFont);
+  ltEl.style.fontFamily=fobj?fobj.family:'';
+  ltEl.dir=fobj&&fobj.arabic?'rtl':'ltr';
+  buildQuickPos();
+  buildFontGrid();
+  buildSg();
+  redrw();
+}
+function setLang(l){LANG=l;applyI18n();}
+
+// ════════════════════════════════════════════════
+//  THEME
+// ════════════════════════════════════════════════
+let THEME='dark';
+function setTheme(t2){
+  THEME=t2;
+  document.body.classList.toggle('light',t2==='light');
+  document.getElementById('btn-dark').classList.toggle('active',t2==='dark');
+  document.getElementById('btn-light').classList.toggle('active',t2==='light');
+}
+
+// ════════════════════════════════════════════════
+//  FONTS
+// ════════════════════════════════════════════════
+const FONTS=[
+  {id:'barlow',family:"'Barlow Condensed',Arial",label:'Barlow',preview:'LABEL',arabic:false},
+  {id:'bebas', family:"'Bebas Neue',Impact",    label:'Bebas Neue',preview:'STAMP',arabic:false},
+  {id:'cairo', family:"'Cairo',sans-serif",     label:'Cairo — القاهرة',preview:'ختم',arabic:true},
+  {id:'amiri', family:"'Amiri',serif",           label:'Amiri — أميري',preview:'طلب',arabic:true},
+  {id:'tajawal',family:"'Tajawal',sans-serif",  label:'Tajawal — تجوال',preview:'سري',arabic:true},
+  {id:'sche',  family:"'Scheherazade New',serif",label:'Scheherazade',preview:'ختم',arabic:true},
+];
+
+// ════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════
+const S={
+  files:[],format:{w:150,h:100},
+  labelText:'PRIVATE ORDER',fontSize:11,opacity:1,
+  style:'solid',labelFont:'barlow',rotation:0,
+  rectColor:{r:220,g:30,b:30},textColor:{r:255,g:255,b:255},bordColor:{r:160,g:15,b:15},
+  // Position in PDF points (null = default top-right)
+  labelX:null,labelY:null,
+  currentPage:0,allPages:[]
+};
+
+const mm2pt=mm=>mm/0.352778;
+const pt2mm=pt=>pt*0.352778;
+const rgb2hex=({r,g,b})=>'#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+const hex2rgb=h=>({r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)});
+const frac=({r,g,b})=>({r:r/255,g:g/255,b:b/255});
+const FMTS={'150x100':{w:150,h:100},A4:{w:210,h:297},A5:{w:148,h:210},Letter:{w:215.9,h:279.4},A6:{w:105,h:148}};
+const MARGIN=6;
+
+function getFontFamily(){return(FONTS.find(f=>f.id===S.labelFont)||FONTS[0]).family;}
+function isArabicFont(){return!!(FONTS.find(f=>f.id===S.labelFont)||{}).arabic;}
+
+// canvas text measurement
+const _mCv=document.createElement('canvas');
+const _mCtx=_mCv.getContext('2d');
+function measureW(txt,fsPx,family){
+  _mCtx.font=`bold ${fsPx}px ${family}`;
+  return _mCtx.measureText(txt).width;
+}
+
+function ldims(txt,fs){
+  const fam=getFontFamily();
+  const mw=measureW(txt,fs*1.15,fam);
+  const ph=fs*0.55,pv=fs*0.38;
+  return{rectW:Math.max(mw+ph*2,fs*2.5),rectH:fs+pv*2,padH:ph,padV:pv};
+}
+
+function defPos(pw,ph,rw,rh){return{x:pw-MARGIN-rw,y:ph-MARGIN-rh};}
+
+function getPos(pw,ph,rw,rh){
+  if(S.labelX!==null&&S.labelY!==null)return{x:S.labelX,y:S.labelY};
+  return defPos(pw,ph,rw,rh);
+}
+
+// Sync X/Y number inputs from S.labelX/S.labelY (in mm from top-left of page)
+function syncInputs(){
+  const{rectW,rectH}=ldims(S.labelText||'x',S.fontSize);
+  // We need ptW/ptH from current page
+  const pw=ptW||mm2pt(S.format.w),ph=ptH||mm2pt(S.format.h);
+  const{x,y}=getPos(pw,ph,rectW,rectH);
+  // PDF y=0 at bottom; convert to "from top" for user
+  const xmm=Math.round(pt2mm(x)*10)/10;
+  const ymm=Math.round(pt2mm(ph-y-rectH)*10)/10;
+  document.getElementById('inp-x').value=Math.max(0,xmm);
+  document.getElementById('inp-y').value=Math.max(0,ymm);
+  document.getElementById('inp-r').value=S.rotation;
+}
+
+// ════════════════════════════════════════════════
+//  DRAWING
+// ════════════════════════════════════════════════
+const STYLES_DEF=[
+  {id:'solid',nk:'style_solid'},{id:'outline',nk:'style_outline'},
+  {id:'double',nk:'style_double'},{id:'stamp',nk:'style_stamp'},
+  {id:'grunge',nk:'style_grunge'},{id:'ribbon',nk:'style_ribbon'},
+];
+
+function rr(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  if(ctx.roundRect){ctx.roundRect(x,y,w,h,r);}
+  else{
+    ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+  }
+}
+
+function ctxText(ctx,txt,cx,cy,fsPx,fam,col){
+  ctx.fillStyle=col;
+  ctx.font=`bold ${fsPx}px ${fam}`;
+  ctx.textBaseline='middle';ctx.textAlign='center';
+  ctx.fillText(txt,cx,cy);
+}
+
+function drawLabel(ctx,x,y,rw,rh,ph,pv,txt,fsPx,style,rc,tc,bc,op,rotDeg){
+  ctx.save();
+  ctx.globalAlpha=op;
+  const fam=getFontFamily();
+  const cx=x+rw/2,cy=y+rh/2;
+  // apply rotation around label center
+  if(rotDeg){
+    ctx.translate(cx,cy);
+    ctx.rotate(rotDeg*Math.PI/180);
+    ctx.translate(-cx,-cy);
+  }
+  switch(style){
+    case'solid':
+      ctx.fillStyle=rgb2hex(rc);rr(ctx,x,y,rw,rh,rh*.18);ctx.fill();
+      ctxText(ctx,txt,cx,cy,fsPx,fam,rgb2hex(tc));break;
+    case'outline':
+      ctx.strokeStyle=rgb2hex(rc);ctx.lineWidth=Math.max(1.5,rh*.09);
+      rr(ctx,x,y,rw,rh,rh*.18);ctx.stroke();
+      ctxText(ctx,txt,cx,cy,fsPx,fam,rgb2hex(rc));break;
+    case'double':{
+      const g=rh*.13;
+      ctx.fillStyle=rgb2hex(rc);rr(ctx,x,y,rw,rh,rh*.14);ctx.fill();
+      ctx.strokeStyle=rgb2hex(bc);ctx.lineWidth=Math.max(1,rh*.065);
+      rr(ctx,x+g,y+g,rw-g*2,rh-g*2,rh*.08);ctx.stroke();
+      ctxText(ctx,txt,cx,cy,fsPx,fam,rgb2hex(tc));break;}
+    case'stamp':{
+      const bw=Math.max(2,rh*.1);
+      ctx.strokeStyle=rgb2hex(rc);ctx.lineWidth=bw*1.4;
+      ctx.setLineDash([rh*.28,rh*.1]);
+      rr(ctx,x+bw,y+bw,rw-bw*2,rh-bw*2,rh*.14);ctx.stroke();ctx.setLineDash([]);
+      ctxText(ctx,txt,cx,cy,fsPx,fam,rgb2hex(rc));break;}
+    case'grunge':{
+      const bw=Math.max(2,rh*.1);
+      ctx.strokeStyle=rgb2hex(rc);ctx.lineWidth=bw*1.6;
+      ctx.setLineDash([rh*.13,rh*.07]);
+      rr(ctx,x+bw,y+bw,rw-bw*2,rh-bw*2,rh*.14);ctx.stroke();ctx.setLineDash([]);
+      ctx.shadowColor=rgb2hex(rc);ctx.shadowBlur=fsPx*.22;
+      ctxText(ctx,txt,cx,cy,fsPx,fam,rgb2hex(rc));
+      ctx.shadowBlur=0;
+      const oa=ctx.globalAlpha;ctx.globalAlpha=oa*.28;
+      ctx.strokeStyle=rgb2hex(rc);ctx.lineWidth=Math.max(1,rh*.05);
+      [[.22,.95,.3],[.5,.98,.52],[.72,.92,.75]].forEach(([y1f,x2f,y2f])=>{
+        ctx.beginPath();ctx.moveTo(x+rw*.02,y+rh*y1f);ctx.lineTo(x+rw*x2f,y+rh*y2f);ctx.stroke();
+      });
+      ctx.globalAlpha=oa;break;}
+    case'ribbon':{
+      ctx.save();ctx.translate(cx,cy);ctx.rotate(-Math.PI/18);ctx.translate(-cx,-cy);
+      const eg=rh*.15;
+      ctx.fillStyle=rgb2hex(rc);
+      ctx.beginPath();ctx.moveTo(x-eg,y);ctx.lineTo(x+rw+eg,y);ctx.lineTo(x+rw,y+rh);ctx.lineTo(x,y+rh);ctx.closePath();ctx.fill();
+      ctx.strokeStyle=rgb2hex(bc);ctx.lineWidth=Math.max(1,rh*.06);
+      ctx.beginPath();ctx.moveTo(x-eg+rh*.18,y+rh*.18);ctx.lineTo(x+rw+eg-rh*.18,y+rh*.18);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x-eg+rh*.18,y+rh*.82);ctx.lineTo(x+rw+eg-rh*.18,y+rh*.82);ctx.stroke();
+      ctxText(ctx,txt,cx,cy,fsPx*.92,fam,rgb2hex(tc));
+      ctx.restore();break;}
+  }
+  ctx.restore();
+}
+
+// ════════════════════════════════════════════════
+//  FONT GRID
+// ════════════════════════════════════════════════
+function buildFontGrid(){
+  const g=document.getElementById('font-grid');g.innerHTML='';
+  FONTS.forEach(f=>{
+    const c=document.createElement('div');c.className='fc'+(S.labelFont===f.id?' on':'');
+    const pv=document.createElement('div');pv.className='fp';
+    pv.style.fontFamily=f.family;pv.style.direction=f.arabic?'rtl':'ltr';pv.textContent=f.preview;
+    const nm=document.createElement('div');nm.className='fn';nm.textContent=f.label;
+    c.appendChild(pv);c.appendChild(nm);
+    c.onclick=()=>{
+      S.labelFont=f.id;
+      const lt=document.getElementById('lt');
+      lt.style.fontFamily=f.family;lt.dir=f.arabic?'rtl':'ltr';
+      buildFontGrid();redrw();
+    };
+    g.appendChild(c);
+  });
+}
+
+// ════════════════════════════════════════════════
+//  STYLE CARDS
+// ════════════════════════════════════════════════
+function buildSg(){
+  const g=document.getElementById('sg');g.innerHTML='';
+  STYLES_DEF.forEach(st=>{
+    const c=document.createElement('div');c.className='sc'+(S.style===st.id?' on':'');
+    const sp=document.createElement('div');sp.className='sp';
+    const cv=document.createElement('canvas');cv.width=52;cv.height=26;
+    const ctx=cv.getContext('2d');
+    const ptxt=isArabicFont()?'ختم':'LABEL';
+    const pfs=7;
+    const{rectW,rectH,padH,padV}=ldims(ptxt,pfs);
+    const sc2=22/rectH,rw2=rectW*sc2,rh2=rectH*sc2,ox=(52-rw2)/2,oy=(26-rh2)/2;
+    drawLabel(ctx,ox,oy,rw2,rh2,padH*sc2,padV*sc2,ptxt,pfs*sc2,st.id,S.rectColor,S.textColor,S.bordColor,1,0);
+    sp.appendChild(cv);
+    const nm=document.createElement('div');nm.className='sn';nm.textContent=t(st.nk);
+    c.appendChild(sp);c.appendChild(nm);
+    c.onclick=()=>{S.style=st.id;buildSg();redrw();};
+    g.appendChild(c);
+  });
+}
+
+// ════════════════════════════════════════════════
+//  QUICK POSITION BUTTONS
+// ════════════════════════════════════════════════
+function buildQuickPos(){
+  const g=document.getElementById('qpos');g.innerHTML='';
+  const positions=[
+    {k:'qp_tl',pos:'TL'},{k:'qp_tc',pos:'TC'},{k:'qp_tr',pos:'TR'},
+    {k:'qp_ml',pos:'ML'},{k:'qp_mc',pos:'MC'},{k:'qp_mr',pos:'MR'},
+    {k:'qp_bl',pos:'BL'},{k:'qp_bc',pos:'BC'},{k:'qp_br',pos:'BR'},
+  ];
+  positions.forEach(({k,pos})=>{
+    const b=document.createElement('button');b.className='qp-btn';b.textContent=t(k);
+    b.onclick=()=>applyQuickPos(pos);
+    g.appendChild(b);
+  });
+}
+
+function applyQuickPos(pos){
+  const{rectW,rectH}=ldims(S.labelText||'x',S.fontSize);
+  const pw=ptW||mm2pt(S.format.w),ph=ptH||mm2pt(S.format.h);
+  const M=MARGIN;
+  const posMap={
+    TL:{x:M,           y:ph-M-rectH},
+    TC:{x:(pw-rectW)/2,y:ph-M-rectH},
+    TR:{x:pw-M-rectW,  y:ph-M-rectH},
+    ML:{x:M,           y:(ph-rectH)/2},
+    MC:{x:(pw-rectW)/2,y:(ph-rectH)/2},
+    MR:{x:pw-M-rectW,  y:(ph-rectH)/2},
+    BL:{x:M,           y:M},
+    BC:{x:(pw-rectW)/2,y:M},
+    BR:{x:pw-M-rectW,  y:M},
+  };
+  const p=posMap[pos];
+  S.labelX=p.x;S.labelY=p.y;
+  syncInputs();redrw();
+}
+
+// ════════════════════════════════════════════════
+//  COLOR SWATCHES
+// ════════════════════════════════════════════════
+const RP=[{r:220,g:30,b:30},{r:0,g:135,b:60},{r:0,g:80,b:200},{r:240,g:155,b:0},{r:10,g:10,b:10},{r:95,g:0,b:165},{r:255,g:255,b:255}];
+const TP=[{r:255,g:255,b:255},{r:0,g:0,b:0},{r:240,g:224,b:0},{r:180,g:240,b:255}];
+const BP=[{r:160,g:15,b:15},{r:0,g:80,b:30},{r:0,g:40,b:150},{r:170,g:90,b:0},{r:50,g:50,b:50},{r:210,g:210,b:180}];
+
+function buildSw(id,presets,key){
+  const w=document.getElementById(id);w.innerHTML='';
+  presets.forEach(col=>{
+    const s=document.createElement('div');s.className='sw';s.style.background=rgb2hex(col);
+    s.classList.toggle('on',JSON.stringify(S[key])===JSON.stringify(col));
+    s.onclick=()=>{S[key]=col;refreshSw(id,presets,key);redrw();buildSg();};
+    w.appendChild(s);
+  });
+  const cw=document.createElement('div');cw.className='cw';
+  const cb=document.createElement('div');cb.className='cs';
+  const ci=document.createElement('input');ci.type='color';ci.value=rgb2hex(S[key]);
+  ci.addEventListener('input',()=>{S[key]=hex2rgb(ci.value);refreshSw(id,presets,key);redrw();buildSg();});
+  cw.appendChild(cb);cw.appendChild(ci);
+  cw.classList.toggle('on',!presets.some(p=>JSON.stringify(p)===JSON.stringify(S[key])));
+  w.appendChild(cw);
+}
+function refreshSw(id,presets,key){
+  const w=document.getElementById(id);
+  w.querySelectorAll('.sw').forEach((s,i)=>s.classList.toggle('on',JSON.stringify(S[key])===JSON.stringify(presets[i])));
+  const cw=w.querySelector('.cw');
+  if(cw)cw.classList.toggle('on',!presets.some(p=>JSON.stringify(p)===JSON.stringify(S[key])));
+}
+
+// ════════════════════════════════════════════════
+//  FORMAT PILLS
+// ════════════════════════════════════════════════
+document.getElementById('fmts').querySelectorAll('.pill').forEach(p=>{
+  p.onclick=()=>{
+    document.querySelectorAll('#fmts .pill').forEach(x=>x.classList.remove('on'));
+    p.classList.add('on');
+    if(p.dataset.f==='custom'){document.getElementById('cfmt').style.display='block';}
+    else{
+      document.getElementById('cfmt').style.display='none';
+      S.format={...FMTS[p.dataset.f]};S.labelX=null;S.labelY=null;
+      rebuildStrip();loadPg(S.currentPage);
+    }
+  };
+});
+document.getElementById('apcf').onclick=()=>{
+  const w=parseFloat(document.getElementById('cfw').value),h=parseFloat(document.getElementById('cfh').value);
+  if(w>0&&h>0){S.format={w,h};S.labelX=null;S.labelY=null;rebuildStrip();loadPg(S.currentPage);}
+};
+
+// ════════════════════════════════════════════════
+//  LABEL TEXT / FONT SIZE / OPACITY
+// ════════════════════════════════════════════════
+document.getElementById('lt').addEventListener('input',e=>{S.labelText=e.target.value;syncInputs();redrw();});
+const fsEl=document.getElementById('fs'),fsvEl=document.getElementById('fsv');
+fsEl.addEventListener('input',()=>{S.fontSize=+fsEl.value;fsvEl.textContent=fsEl.value;syncInputs();redrw();});
+const opEl=document.getElementById('op'),opvEl=document.getElementById('opv');
+opEl.addEventListener('input',()=>{S.opacity=+opEl.value/100;opvEl.textContent=opEl.value+'%';redrw();});
+
+// ════════════════════════════════════════════════
+//  POSITION NUMBER INPUTS
+// ════════════════════════════════════════════════
+function posFromInputs(){
+  const xmm=parseFloat(document.getElementById('inp-x').value)||0;
+  const ymm=parseFloat(document.getElementById('inp-y').value)||0;
+  const{rectW,rectH}=ldims(S.labelText||'x',S.fontSize);
+  const ph=ptH||mm2pt(S.format.h);
+  // x from left in points; y: user input is from top, convert to PDF bottom-origin
+  S.labelX=mm2pt(xmm);
+  S.labelY=ph-mm2pt(ymm)-rectH;
+}
+document.getElementById('inp-x').addEventListener('input',()=>{posFromInputs();redrw();});
+document.getElementById('inp-y').addEventListener('input',()=>{posFromInputs();redrw();});
+document.getElementById('inp-r').addEventListener('input',()=>{
+  S.rotation=parseInt(document.getElementById('inp-r').value)||0;redrw();
+});
+
+// +/- buttons
+function makeStepBtn(id,field,delta){
+  document.getElementById(id).addEventListener('click',()=>{
+    const el=document.getElementById(field);
+    el.value=Math.round(((parseFloat(el.value)||0)+delta)*10)/10;
+    el.dispatchEvent(new Event('input'));
+  });
+}
+makeStepBtn('x-dec','inp-x',-1);makeStepBtn('x-inc','inp-x',1);
+makeStepBtn('y-dec','inp-y',-1);makeStepBtn('y-inc','inp-y',1);
+makeStepBtn('r-dec','inp-r',-5);makeStepBtn('r-inc','inp-r',5);
+
+// ════════════════════════════════════════════════
+//  FILE HANDLING
+// ════════════════════════════════════════════════
+const dzEl=document.getElementById('dz'),fiEl=document.getElementById('fi');
+dzEl.addEventListener('dragover',e=>{e.preventDefault();dzEl.classList.add('over');});
+dzEl.addEventListener('dragleave',()=>dzEl.classList.remove('over'));
+dzEl.addEventListener('drop',e=>{e.preventDefault();dzEl.classList.remove('over');handleFiles(e.dataTransfer.files);});
+fiEl.addEventListener('change',e=>{handleFiles(e.target.files);fiEl.value='';});
+
+async function handleFiles(fl){
+  for(const f of fl){
+    if(f.type!=='application/pdf')continue;
+    S.files.push({name:f.name,buf:(await f.arrayBuffer()).slice(0)});
+  }
+  renderChips();await parsePages();rebuildStrip();loadPg(0);
+  document.getElementById('dlb').disabled=!S.allPages.length;
+}
+async function parsePages(){
+  S.allPages=[];const lib=await getPdfJs();
+  for(const f of S.files){
+    const pdf=await lib.getDocument({data:f.buf.slice(0)}).promise;
+    for(let i=1;i<=pdf.numPages;i++)S.allPages.push({name:f.name,buf:f.buf,pidx:i-1,doc:pdf});
+  }
+}
+function renderChips(){
+  const c=document.getElementById('chips');c.innerHTML='';
+  S.files.forEach((f,i)=>{
+    const ch=document.createElement('div');ch.className='chip';
+    ch.innerHTML=`<span>${f.name}</span><span class="x" data-i="${i}">✕</span>`;
+    c.appendChild(ch);
+  });
+  c.querySelectorAll('.x').forEach(el=>el.addEventListener('click',async()=>{
+    S.files.splice(+el.dataset.i,1);renderChips();await parsePages();rebuildStrip();
+    S.allPages.length?loadPg(0):clearStage();
+    document.getElementById('dlb').disabled=!S.allPages.length;
+  }));
+}
+function clearStage(){
+  ['bc','oc'].forEach(id=>{const c=document.getElementById(id);c.width=400;c.height=260;c.getContext('2d').clearRect(0,0,400,260);});
+  document.getElementById('strip').innerHTML='';
+}
+
+// ════════════════════════════════════════════════
+//  PDF.js loader
+// ════════════════════════════════════════════════
+let pdfjs=null;
+async function getPdfJs(){
+  if(pdfjs)return pdfjs;
+  return new Promise(res=>{
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload=()=>{
+      window['pdfjs-dist/build/pdf'].GlobalWorkerOptions.workerSrc=
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      pdfjs=window['pdfjs-dist/build/pdf'];res(pdfjs);
+    };
+    document.head.appendChild(s);
+  });
+}
+
+// ════════════════════════════════════════════════
+//  PAGE STRIP
+// ════════════════════════════════════════════════
+async function rebuildStrip(){
+  const strip=document.getElementById('strip');strip.innerHTML='';
+  for(let i=0;i<S.allPages.length;i++){
+    const tc=await mkThumb(i,55);
+    const w=document.createElement('div');w.className='pt'+(i===S.currentPage?' on':'');
+    w.appendChild(tc);
+    const n=document.createElement('span');n.className='pn';n.textContent=i+1;
+    w.appendChild(n);w.onclick=()=>loadPg(i);strip.appendChild(w);
+  }
+}
+async function mkThumb(idx,h){
+  const{doc,pidx}=S.allPages[idx];
+  const pg=await doc.getPage(pidx+1);
+  const vp=pg.getViewport({scale:1}),sc=h/vp.height,vp2=pg.getViewport({scale:sc});
+  const cv=document.createElement('canvas');cv.width=vp2.width;cv.height=vp2.height;
+  await pg.render({canvasContext:cv.getContext('2d'),viewport:vp2}).promise;
+  return cv;
+}
+
+// ════════════════════════════════════════════════
+//  MAIN CANVAS
+// ════════════════════════════════════════════════
+let ptW=1,ptH=1,canvasScale=1; // canvasScale = canvas px / pt
+const stageEl=document.querySelector('.stage');
+function maxW(){return Math.max(200,(stageEl.clientWidth||700)-40);}
+
+async function loadPg(idx){
+  if(!S.allPages.length)return;
+  S.currentPage=Math.max(0,Math.min(idx,S.allPages.length-1));
+  document.querySelectorAll('.pt').forEach((el,i)=>el.classList.toggle('on',i===S.currentPage));
+  const{doc,pidx}=S.allPages[S.currentPage];
+  const pg=await doc.getPage(pidx+1);
+  const vp1=pg.getViewport({scale:1});
+  const sc=Math.min(maxW()/vp1.width,560/vp1.height,2.5);
+  ptW=vp1.width;ptH=vp1.height;canvasScale=sc;
+  const vp2=pg.getViewport({scale:sc});
+  const bc=document.getElementById('bc'),oc=document.getElementById('oc');
+  bc.width=vp2.width;bc.height=vp2.height;
+  oc.width=vp2.width;oc.height=vp2.height;
+  await pg.render({canvasContext:bc.getContext('2d'),viewport:vp2}).promise;
+  syncInputs();redrw();
+}
+
+function redrw(){
+  buildSg();
+  const oc=document.getElementById('oc');
+  if(!oc.width)return;
+  const ctx=oc.getContext('2d');
+  ctx.clearRect(0,0,oc.width,oc.height);
+  const txt=S.labelText||'(empty)',fs=S.fontSize;
+  const{rectW,rectH,padH,padV}=ldims(txt,fs);
+  const sc=canvasScale;
+  const rw=rectW*sc,rh=rectH*sc,ph=padH*sc,pv=padV*sc;
+  const{x:ptX,y:ptY}=getPos(ptW,ptH,rectW,rectH);
+  // PDF y=0 at bottom → canvas y=0 at top
+  const cx=ptX*sc, cy=(ptH-ptY-rectH)*sc;
+  drawLabel(ctx,cx,cy,rw,rh,ph,pv,txt,fs*sc,S.style,S.rectColor,S.textColor,S.bordColor,S.opacity,S.rotation);
+}
+
+// ════════════════════════════════════════════════
+//  DRAG & DROP PLACEMENT — events on #co (the container)
+//  The overlay #oc has pointer-events:none so #co receives all events
+// ════════════════════════════════════════════════
+const coEl=document.getElementById('co');
+let isDragging=false,dragOX=0,dragOY=0;
+
+function canvasToPt(mx,my){
+  return{ptx:mx/canvasScale, pty:ptH-(my/canvasScale)};
+}
+
+function getLabelCanvasRect(){
+  const{rectW,rectH}=ldims(S.labelText||'x',S.fontSize);
+  const{x:ptX,y:ptY}=getPos(ptW,ptH,rectW,rectH);
+  return{
+    cx:ptX*canvasScale,
+    cy:(ptH-ptY-rectH)*canvasScale,
+    rw:rectW*canvasScale,
+    rh:rectH*canvasScale,
+  };
+}
+
+function applyDragPos(mx,my,offX,offY){
+  const{rectW,rectH}=ldims(S.labelText||'x',S.fontSize);
+  const newCx=mx-offX, newCy=my-offY;
+  S.labelX=newCx/canvasScale;
+  S.labelY=ptH-(newCy/canvasScale)-rectH;
+  syncInputs();redrw();
+}
+
+coEl.addEventListener('mousedown',e=>{
+  if(!S.allPages.length)return;
+  e.preventDefault();
+  const r=coEl.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  const{cx,cy,rw,rh}=getLabelCanvasRect();
+  if(mx>=cx&&mx<=cx+rw&&my>=cy&&my<=cy+rh){
+    // clicked inside label — drag from existing position
+    isDragging=true;dragOX=mx-cx;dragOY=my-cy;
+    coEl.classList.add('dragging');
+  } else {
+    // clicked outside — teleport label center to click
+    const{rectW,rectH}=ldims(S.labelText||'x',S.fontSize);
+    const rw2=rectW*canvasScale,rh2=rectH*canvasScale;
+    isDragging=true;dragOX=rw2/2;dragOY=rh2/2;
+    applyDragPos(mx,my,dragOX,dragOY);
+    coEl.classList.add('dragging');
+  }
+});
+
+document.addEventListener('mousemove',e=>{
+  if(!isDragging)return;
+  const r=coEl.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  applyDragPos(mx,my,dragOX,dragOY);
+});
+
+document.addEventListener('mouseup',()=>{
+  isDragging=false;coEl.classList.remove('dragging');
+});
+
+// Touch
+coEl.addEventListener('touchstart',e=>{
+  if(!S.allPages.length)return;
+  e.preventDefault();
+  const t2=e.touches[0];
+  const r=coEl.getBoundingClientRect();
+  const mx=t2.clientX-r.left, my=t2.clientY-r.top;
+  const{rectW,rectH}=ldims(S.labelText||'x',S.fontSize);
+  const rw2=rectW*canvasScale,rh2=rectH*canvasScale;
+  isDragging=true;dragOX=rw2/2;dragOY=rh2/2;
+  applyDragPos(mx,my,dragOX,dragOY);
+},{passive:false});
+
+document.addEventListener('touchmove',e=>{
+  if(!isDragging)return;e.preventDefault();
+  const t2=e.touches[0];
+  const r=coEl.getBoundingClientRect();
+  const mx=t2.clientX-r.left, my=t2.clientY-r.top;
+  applyDragPos(mx,my,dragOX,dragOY);
+},{passive:false});
+
+document.addEventListener('touchend',()=>{isDragging=false;});
+
+// ════════════════════════════════════════════════
+//  DOWNLOAD
+// ════════════════════════════════════════════════
+document.getElementById('dlb').addEventListener('click',stamp);
+document.getElementById('clr').addEventListener('click',()=>{
+  S.files=[];S.allPages=[];renderChips();clearStage();
+  document.getElementById('dlb').disabled=true;setSt('');
+});
+
+async function stamp(){
+  if(!S.allPages.length)return;
+  setSt(t('st_stamp'));document.getElementById('dlb').disabled=true;
+  try{
+    const{PDFDocument,rgb,StandardFonts,degrees}=PDFLib;
+    const out=await PDFDocument.create();
+    const fmap=new Map();
+    for(const p of S.allPages){if(!fmap.has(p.buf))fmap.set(p.buf,[]);fmap.get(p.buf).push(p.pidx);}
+    for(const[buf,idxs]of fmap){
+      const src=await PDFDocument.load(buf.slice(0));
+      const pgs=await out.copyPages(src,idxs);pgs.forEach(p=>out.addPage(p));
+    }
+    const font=await out.embedFont(StandardFonts.HelveticaBold);
+    const txt=S.labelText||'';
+    if(!txt.trim()){setSt(t('st_empty'));document.getElementById('dlb').disabled=false;return;}
+    const fs=S.fontSize,{rectW,rectH,padH,padV}=ldims(txt,fs);
+    const rc=frac(S.rectColor),tc=frac(S.textColor),bc2=frac(S.bordColor),op=S.opacity;
+    let embedFont=font;
+    if(isArabicFont()){
+      try{
+        const url=getFontUrl(S.labelFont);
+        if(url){const bytes=await fetch(url).then(r2=>r2.arrayBuffer());embedFont=await out.embedFont(bytes);}
+      }catch(e2){console.warn('Arabic embed failed',e2);}
+    }
+    const rot=S.rotation?degrees(S.rotation):undefined;
+
+    for(const pg of out.getPages()){
+      const{width:pw,height:ph}=pg.getSize();
+      let{x:px,y:py}=getPos(pw,ph,rectW,rectH);
+      px=Math.max(0,Math.min(pw-rectW,px));
+      py=Math.max(0,Math.min(ph-rectH,py));
+      const rOpts=rot?{rotate:rot}:{};
+      switch(S.style){
+        case'solid':
+          pg.drawRectangle({x:px,y:py,width:rectW,height:rectH,color:rgb(rc.r,rc.g,rc.b),opacity:op,...rOpts});
+          pg.drawText(txt,{x:px+padH,y:py+padV,size:fs,font:embedFont,color:rgb(tc.r,tc.g,tc.b),opacity:op,...rOpts});break;
+        case'outline':
+          pg.drawRectangle({x:px,y:py,width:rectW,height:rectH,borderColor:rgb(rc.r,rc.g,rc.b),borderWidth:Math.max(.8,rectH*.09),opacity:op,...rOpts});
+          pg.drawText(txt,{x:px+padH,y:py+padV,size:fs,font:embedFont,color:rgb(rc.r,rc.g,rc.b),opacity:op,...rOpts});break;
+        case'double':{const g=rectH*.13;
+          pg.drawRectangle({x:px,y:py,width:rectW,height:rectH,color:rgb(rc.r,rc.g,rc.b),opacity:op,...rOpts});
+          pg.drawRectangle({x:px+g,y:py+g,width:rectW-g*2,height:rectH-g*2,borderColor:rgb(bc2.r,bc2.g,bc2.b),borderWidth:Math.max(.5,rectH*.065),opacity:op,...rOpts});
+          pg.drawText(txt,{x:px+padH,y:py+padV,size:fs,font:embedFont,color:rgb(tc.r,tc.g,tc.b),opacity:op,...rOpts});break;}
+        case'stamp':case'grunge':{const bw=Math.max(.8,rectH*.1);
+          pg.drawRectangle({x:px+bw,y:py+bw,width:rectW-bw*2,height:rectH-bw*2,borderColor:rgb(rc.r,rc.g,rc.b),borderWidth:bw*1.5,opacity:op,...rOpts});
+          pg.drawText(txt,{x:px+padH*.8,y:py+padV,size:fs*1.05,font:embedFont,color:rgb(rc.r,rc.g,rc.b),opacity:op,...rOpts});break;}
+        case'ribbon':
+          pg.drawRectangle({x:px,y:py,width:rectW,height:rectH,color:rgb(rc.r,rc.g,rc.b),opacity:op,rotate:degrees((rot?S.rotation:0)-8)});
+          pg.drawText(txt,{x:px+padH,y:py+padV,size:fs,font:embedFont,color:rgb(tc.r,tc.g,tc.b),opacity:op,rotate:degrees((rot?S.rotation:0)-8)});break;
+      }
+    }
+    const bytes=await out.save();
+    saveAs(new Blob([bytes],{type:'application/pdf'}),'stamped.pdf');
+    setSt(t('st_done'));
+  }catch(e){console.error(e);setSt('✗ '+e.message,true);}
+  document.getElementById('dlb').disabled=!S.allPages.length;
+}
+
+function getFontUrl(id){
+  return{
+    cairo:'https://fonts.gstatic.com/s/cairo/v28/SLXgc1nY6HkvalIhTpumxdt0UX8.woff2',
+    amiri:'https://fonts.gstatic.com/s/amiri/v27/J7aRnpd8CGxBHqUpvrIw74NL.woff2',
+    tajawal:'https://fonts.gstatic.com/s/tajawal/v9/Iura6YBj_oCad4k1rzaLCr5IlLA.woff2',
+    sche:'https://fonts.gstatic.com/s/scheherazadenew/v19/4UaerFhTZydB7hf_GOcRk1bJ5cT8.woff2',
+  }[id]||null;
+}
+
+function setSt(m,err=false){const el=document.getElementById('stat');el.textContent=m;el.className=err?'err':'';}
+
+// ════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════
+buildSw('rcr',RP,'rectColor');
+buildSw('tcr',TP,'textColor');
+buildSw('bcr',BP,'bordColor');
+buildFontGrid();
+buildQuickPos();
+buildSg();
+applyI18n();
+</script>
+</body>
+</html>
