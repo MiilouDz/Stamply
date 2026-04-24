@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Stamply For Ecommerce</title>
+<title>PDF Label Stamper</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@400;600;700;800&family=Cairo:wght@400;600;700;900&family=Amiri:wght@400;700&family=Tajawal:wght@400;500;700;800&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -217,7 +217,7 @@ body.ar .cf-row{flex-direction:row-reverse}
 <body>
 
 <header>
-  <div class="logo" id="logo-txt">Stamply<em>For</em> Ecommerce</div>
+  <div class="logo" id="logo-txt">PDF <em>Label</em> Stamper</div>
   <span class="hd-sub" id="hdr-sub">multi-file · multi-label · drag to place</span>
   <div class="hcontrols">
     <div class="tgrp">
@@ -1021,73 +1021,170 @@ document.getElementById('clr').addEventListener('click',()=>{
   document.getElementById('dlb').disabled=true;setSt('');
 });
 
-async function stamp(){
-  if(!S.allPages.length)return;
-  if(S.labels.some(l=>!l.text.trim())){setSt(t('st_empty'),true);return;}
-  setSt(t('st_stamp'));document.getElementById('dlb').disabled=true;
-  try{
-    const{PDFDocument,rgb,StandardFonts,degrees}=PDFLib;
-    const out=await PDFDocument.create();
-    // Merge pages preserving file order
-    const fmap=new Map();
-    for(const p of S.allPages){if(!fmap.has(p.buf))fmap.set(p.buf,[]);fmap.get(p.buf).push(p.pidx);}
-    for(const[buf,idxs]of fmap){
-      const src=await PDFDocument.load(buf.slice(0));
-      const pgs=await out.copyPages(src,idxs);pgs.forEach(p=>out.addPage(p));
-    }
-    const baseFontEmbed=await out.embedFont(StandardFonts.HelveticaBold);
+/*
+  STAMP APPROACH — Canvas → PNG → PDF image
+  ─────────────────────────────────────────
+  pdf-lib's built-in drawText is limited to WinAnsi (Latin only).
+  Embedding custom TTF fonts still fails for Arabic because pdf-lib
+  internally applies WinAnsi encoding to ALL text operations.
 
-    // pre-embed Arabic fonts (deduplicated)
-    const arFontCache=new Map();
-    for(const lbl of S.labels){
-      if(isAr(lbl.fontId)&&!arFontCache.has(lbl.fontId)){
-        try{
-          const url=getArFontUrl(lbl.fontId);
-          if(url){const bytes=await fetch(url).then(r=>r.arrayBuffer());arFontCache.set(lbl.fontId,await out.embedFont(bytes));}
-        }catch(e2){console.warn('font embed failed',e2);}
-      }
-    }
+  Solution: render the entire label (rectangle + styled text) onto an
+  offscreen <canvas> at 4× resolution using the browser's own font
+  rendering (which handles Arabic, RTL, ligatures perfectly), export
+  as PNG, then embed that PNG image into the PDF at the correct position.
 
-    for(const pg of out.getPages()){
-      const{width:pw,height:ph}=pg.getSize();
-      for(const lbl of S.labels){
-        if(!lbl.text.trim())continue;
-        const embedFont=arFontCache.get(lbl.fontId)||baseFontEmbed;
-        const{rectW,rectH,padH,padV}=ldims(lbl.text,lbl.fontSize,lbl.fontId);
-        let{x:px,y:py}=getPos(lbl,pw,ph);
-        px=Math.max(0,Math.min(pw-rectW,px));py=Math.max(0,Math.min(ph-rectH,py));
-        const rc=fr(lbl.rectColor),tc=fr(lbl.textColor),bc2=fr(lbl.bordColor),op=lbl.opacity;
-        const fs=lbl.fontSize;
-        const rotOpts=lbl.rotation?{rotate:degrees(lbl.rotation)}:{};
-        switch(lbl.style){
-          case'solid':
-            pg.drawRectangle({x:px,y:py,width:rectW,height:rectH,color:rgb(rc.r,rc.g,rc.b),opacity:op,...rotOpts});
-            pg.drawText(lbl.text,{x:px+padH,y:py+padV,size:fs,font:embedFont,color:rgb(tc.r,tc.g,tc.b),opacity:op,...rotOpts});break;
-          case'outline':
-            pg.drawRectangle({x:px,y:py,width:rectW,height:rectH,borderColor:rgb(rc.r,rc.g,rc.b),borderWidth:Math.max(.8,rectH*.09),opacity:op,...rotOpts});
-            pg.drawText(lbl.text,{x:px+padH,y:py+padV,size:fs,font:embedFont,color:rgb(rc.r,rc.g,rc.b),opacity:op,...rotOpts});break;
-          case'double':{const g=rectH*.13;
-            pg.drawRectangle({x:px,y:py,width:rectW,height:rectH,color:rgb(rc.r,rc.g,rc.b),opacity:op,...rotOpts});
-            pg.drawRectangle({x:px+g,y:py+g,width:rectW-g*2,height:rectH-g*2,borderColor:rgb(bc2.r,bc2.g,bc2.b),borderWidth:Math.max(.5,rectH*.065),opacity:op,...rotOpts});
-            pg.drawText(lbl.text,{x:px+padH,y:py+padV,size:fs,font:embedFont,color:rgb(tc.r,tc.g,tc.b),opacity:op,...rotOpts});break;}
-          case'stamp':case'grunge':{const bw=Math.max(.8,rectH*.1);
-            pg.drawRectangle({x:px+bw,y:py+bw,width:rectW-bw*2,height:rectH-bw*2,borderColor:rgb(rc.r,rc.g,rc.b),borderWidth:bw*1.5,opacity:op,...rotOpts});
-            pg.drawText(lbl.text,{x:px+padH*.8,y:py+padV,size:fs*1.05,font:embedFont,color:rgb(rc.r,rc.g,rc.b),opacity:op,...rotOpts});break;}
-          case'ribbon':
-            pg.drawRectangle({x:px,y:py,width:rectW,height:rectH,color:rgb(rc.r,rc.g,rc.b),opacity:op,rotate:degrees((lbl.rotation||0)-8)});
-            pg.drawText(lbl.text,{x:px+padH,y:py+padV,size:fs,font:embedFont,color:rgb(tc.r,tc.g,tc.b),opacity:op,rotate:degrees((lbl.rotation||0)-8)});break;
-        }
-      }
-    }
-    const bytes=await out.save();
-    saveAs(new Blob([bytes],{type:'application/pdf'}),'stamped.pdf');
-    setSt(t('st_done'));
-  }catch(e){console.error(e);setSt('✗ '+e.message,true);}
-  document.getElementById('dlb').disabled=!S.allPages.length;
+  This means:
+  • ANY language / script works (Arabic, Chinese, Emoji, etc.)
+  • All stamp styles work exactly as the preview shows
+  • No font downloading required
+*/
+
+
+// Convert dataURL to Uint8Array for pdf-lib
+function dataUrlToBytes(dataUrl){
+  const b64 = dataUrl.split(',')[1];
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+  return arr;
 }
 
-function getArFontUrl(id){
-  return{cairo:'https://fonts.gstatic.com/s/cairo/v28/SLXgc1nY6HkvalIhTpumxdt0UX8.woff2',amiri:'https://fonts.gstatic.com/s/amiri/v27/J7aRnpd8CGxBHqUpvrIw74NL.woff2',tajw:'https://fonts.gstatic.com/s/tajawal/v9/Iura6YBj_oCad4k1rzaLCr5IlLA.woff2',sche:'https://fonts.gstatic.com/s/scheherazadenew/v19/4UaerFhTZydB7hf_GOcRk1bJ5cT8.woff2'}[id]||null;
+async function stamp(){
+  if(!S.allPages.length) return;
+  if(S.labels.some(l=>!l.text.trim())){ setSt(t('st_empty'),true); return; }
+  setSt(t('st_stamp')); document.getElementById('dlb').disabled=true;
+  try{
+    const{PDFDocument, degrees} = PDFLib;
+    const out = await PDFDocument.create();
+
+    // ── Merge all source pages ──
+    const fmap = new Map();
+    for(const p of S.allPages){
+      if(!fmap.has(p.buf)) fmap.set(p.buf,[]);
+      fmap.get(p.buf).push(p.pidx);
+    }
+    for(const [buf,idxs] of fmap){
+      const src = await PDFDocument.load(buf.slice(0));
+      const pgs = await out.copyPages(src, idxs);
+      pgs.forEach(p => out.addPage(p));
+    }
+
+    // ── Pre-render each label to PNG at 4× ──
+    // We render at 4× the base pt size for crisp output
+    // Scale factor: 4px per pt (288 dpi equivalent)
+    const RENDER_SCALE = 4;
+    const labelImages = [];
+    for(const lbl of S.labels){
+      if(!lbl.text.trim()) continue;
+      const{rectW, rectH, padH, padV} = ldims(lbl.text, lbl.fontSize, lbl.fontId);
+      const PAD = rectH * 0.6; // extra canvas space for rotation
+
+      const cvW = Math.ceil((rectW + PAD*2) * RENDER_SCALE);
+      const cvH = Math.ceil((rectH + PAD*2) * RENDER_SCALE);
+      const cv  = document.createElement('canvas');
+      cv.width  = cvW; cv.height = cvH;
+      const ctx = cv.getContext('2d');
+
+      // Draw label centred in the padded canvas
+      const sc = RENDER_SCALE;
+      const x  = PAD, y = PAD;
+      const rw = rectW, rh = rectH;
+      const cx2 = x + rw/2, cy2 = y + rh/2;
+      const fsPx = lbl.fontSize;
+      const fam  = getFam(lbl.fontId);
+      const rc=lbl.rectColor, tc=lbl.textColor, bc=lbl.bordColor;
+
+      ctx.scale(sc, sc);
+
+      // apply rotation around label center
+      ctx.save();
+      if(lbl.rotation){ ctx.translate(cx2,cy2); ctx.rotate(lbl.rotation*Math.PI/180); ctx.translate(-cx2,-cy2); }
+      ctx.globalAlpha = lbl.opacity;
+
+      switch(lbl.style){
+        case'solid':
+          ctx.fillStyle=rgb2h(rc); rr(ctx,x,y,rw,rh,rh*.18); ctx.fill();
+          ctxTxt(ctx,lbl.text,cx2,cy2,fsPx,fam,rgb2h(tc)); break;
+        case'outline':
+          ctx.strokeStyle=rgb2h(rc); ctx.lineWidth=Math.max(1.5,rh*.09);
+          rr(ctx,x,y,rw,rh,rh*.18); ctx.stroke();
+          ctxTxt(ctx,lbl.text,cx2,cy2,fsPx,fam,rgb2h(rc)); break;
+        case'double':{
+          const g=rh*.13;
+          ctx.fillStyle=rgb2h(rc); rr(ctx,x,y,rw,rh,rh*.14); ctx.fill();
+          ctx.strokeStyle=rgb2h(bc); ctx.lineWidth=Math.max(1,rh*.065);
+          rr(ctx,x+g,y+g,rw-g*2,rh-g*2,rh*.08); ctx.stroke();
+          ctxTxt(ctx,lbl.text,cx2,cy2,fsPx,fam,rgb2h(tc)); break;}
+        case'stamp':{
+          const bw=Math.max(2,rh*.1);
+          ctx.strokeStyle=rgb2h(rc); ctx.lineWidth=bw*1.4; ctx.setLineDash([rh*.28,rh*.1]);
+          rr(ctx,x+bw,y+bw,rw-bw*2,rh-bw*2,rh*.14); ctx.stroke(); ctx.setLineDash([]);
+          ctxTxt(ctx,lbl.text,cx2,cy2,fsPx,fam,rgb2h(rc)); break;}
+        case'grunge':{
+          const bw=Math.max(2,rh*.1);
+          ctx.strokeStyle=rgb2h(rc); ctx.lineWidth=bw*1.6; ctx.setLineDash([rh*.13,rh*.07]);
+          rr(ctx,x+bw,y+bw,rw-bw*2,rh-bw*2,rh*.14); ctx.stroke(); ctx.setLineDash([]);
+          ctx.shadowColor=rgb2h(rc); ctx.shadowBlur=fsPx*.22;
+          ctxTxt(ctx,lbl.text,cx2,cy2,fsPx,fam,rgb2h(rc)); ctx.shadowBlur=0;
+          const oa=ctx.globalAlpha; ctx.globalAlpha=oa*.28;
+          ctx.strokeStyle=rgb2h(rc); ctx.lineWidth=Math.max(1,rh*.05);
+          [[.22,.95,.3],[.5,.98,.52],[.72,.92,.75]].forEach(([y1f,x2f,y2f])=>{
+            ctx.beginPath(); ctx.moveTo(x+rw*.02,y+rh*y1f); ctx.lineTo(x+rw*x2f,y+rh*y2f); ctx.stroke();
+          });
+          ctx.globalAlpha=oa; break;}
+        case'ribbon':{
+          ctx.save(); ctx.translate(cx2,cy2); ctx.rotate(-Math.PI/18); ctx.translate(-cx2,-cy2);
+          const eg=rh*.15;
+          ctx.fillStyle=rgb2h(rc);
+          ctx.beginPath(); ctx.moveTo(x-eg,y); ctx.lineTo(x+rw+eg,y); ctx.lineTo(x+rw,y+rh); ctx.lineTo(x,y+rh); ctx.closePath(); ctx.fill();
+          ctx.strokeStyle=rgb2h(bc); ctx.lineWidth=Math.max(1,rh*.06);
+          ctx.beginPath(); ctx.moveTo(x-eg+rh*.18,y+rh*.18); ctx.lineTo(x+rw+eg-rh*.18,y+rh*.18); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(x-eg+rh*.18,y+rh*.82); ctx.lineTo(x+rw+eg-rh*.18,y+rh*.82); ctx.stroke();
+          ctxTxt(ctx,lbl.text,cx2,cy2,fsPx*.92,fam,rgb2h(tc)); ctx.restore(); break;}
+      }
+      ctx.restore();
+
+      const pngBytes = dataUrlToBytes(cv.toDataURL('image/png'));
+      const pngImage = await out.embedPng(pngBytes);
+
+      labelImages.push({
+        lbl,
+        pngImage,
+        rectW, rectH,
+        PAD,          // pt padding baked into the image
+        imgWpt: cvW / RENDER_SCALE,   // image natural width in pt
+        imgHpt: cvH / RENDER_SCALE,   // image natural height in pt
+      });
+    }
+
+    // ── Stamp each page ──
+    for(const pg of out.getPages()){
+      const{width:pw, height:ph} = pg.getSize();
+      for(const{lbl, pngImage, rectW, rectH, PAD, imgWpt, imgHpt} of labelImages){
+        let{x:ptX, y:ptY} = getPos(lbl, pw, ph);
+        ptX = Math.max(0, Math.min(pw-rectW, ptX));
+        ptY = Math.max(0, Math.min(ph-rectH, ptY));
+
+        // The PNG image is larger than the label by PAD on all sides.
+        // Draw it offset by -PAD so the label content lands at (ptX, ptY).
+        pg.drawImage(pngImage, {
+          x:      ptX - PAD,
+          y:      ptY - PAD,
+          width:  imgWpt,
+          height: imgHpt,
+          opacity: 1,  // opacity already baked into PNG
+        });
+      }
+    }
+
+    const bytes = await out.save();
+    saveAs(new Blob([bytes],{type:'application/pdf'}), 'stamped.pdf');
+    setSt(t('st_done'));
+  }catch(e){
+    console.error(e);
+    setSt('✗ '+e.message, true);
+  }
+  document.getElementById('dlb').disabled = !S.allPages.length;
 }
 function setSt(m,err=false){const el=document.getElementById('stat');el.textContent=m;el.className=err?'err':'';}
 
