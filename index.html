@@ -389,7 +389,7 @@ function applyI18n(){
   document.getElementById('logo-txt').innerHTML=t('logo');
   document.getElementById('hdr-sub').textContent=t('hdr_sub');
   document.querySelectorAll('[data-i]').forEach(el=>{const k=el.dataset.i;if(k)el.textContent=t(k);});
-  buildQuickPos();renderLabelList();renderEditor();redrw();
+  buildQuickPos();_editorLabelId=null;renderLabelList();renderEditor();redrawCanvas();
 }
 function setLang(l){LANG=l;applyI18n();}
 
@@ -558,17 +558,7 @@ function drawLabelOnCanvas(ctx,lbl,ptPageW,ptPageH,sc,isActive){
 }
 
 function redrw(){
-  renderEditor(); // keep editor in sync
-  const oc=document.getElementById('oc');
-  if(!oc.width)return;
-  const ctx=oc.getContext('2d');
-  ctx.clearRect(0,0,oc.width,oc.height);
-  // draw non-active first, active on top
-  const inactive=S.labels.filter(l=>l.id!==S.activeLabel);
-  const active=S.labels.find(l=>l.id===S.activeLabel);
-  inactive.forEach(l=>drawLabelOnCanvas(ctx,l,ptW,ptH,canvasScale,false));
-  if(active)drawLabelOnCanvas(ctx,active,ptW,ptH,canvasScale,true);
-  syncPosInputs();
+  redrawCanvas();
 }
 
 /* ════════════════════════════════════════════
@@ -602,84 +592,116 @@ function renderLabelList(){
 
 function selectLabel(id){
   S.activeLabel=id;
+  _editorLabelId=null; // force full editor rebuild for new label
   renderLabelList();
   renderEditor();
-  redrw();
+  redrawCanvas();
 }
 function deleteLabel(id){
-  if(S.labels.length===1)return; // keep at least one
+  if(S.labels.length===1)return;
   S.labels=S.labels.filter(l=>l.id!==id);
   if(S.activeLabel===id)S.activeLabel=S.labels[S.labels.length-1].id;
-  renderLabelList();renderEditor();redrw();
+  _editorLabelId=null;
+  renderLabelList();renderEditor();redrawCanvas();
 }
 document.getElementById('lbl-add-btn').onclick=()=>{
   const newL=mkLabel();
   S.labels.push(newL);
   S.activeLabel=newL.id;
-  renderLabelList();renderEditor();redrw();
+  _editorLabelId=null;
+  renderLabelList();renderEditor();redrawCanvas();
 };
 
 /* ════════════════════════════════════════════
    LABEL EDITOR
+   Key rule: NEVER rebuild DOM on keystroke.
+   - renderEditor()      → full rebuild (only on label switch / lang change)
+   - refreshEditorState()→ update .on classes + slider vals in-place
 ════════════════════════════════════════════ */
+let _editorLabelId = null; // tracks which label the editor was built for
+
 function renderEditor(){
   const wrap=document.getElementById('lbl-editor-wrap');
   const lbl=getAL();
-  if(!lbl){wrap.innerHTML='';return;}
+  if(!lbl){wrap.innerHTML='';_editorLabelId=null;return;}
 
-  // rebuild editor HTML fresh (avoids stale event listeners via innerHTML)
+  // Only do a full DOM rebuild when the active label actually changes
+  // (or first time, or after language switch)
+  if(_editorLabelId===lbl.id && wrap.querySelector('.lbl-editor')){
+    refreshEditorState(lbl);
+    return;
+  }
+  _editorLabelId = lbl.id;
+
   wrap.innerHTML='';
   const ed=document.createElement('div');
   ed.className='lbl-editor';
 
-  // ── TEXT ──
+  // ── TEXT INPUT ── (id anchored so we can find it later)
   const textDiv=document.createElement('div');
-  const tl=document.createElement('label');tl.className='fl';tl.setAttribute('data-i','lbl_text');tl.textContent=t('lbl_text');
-  const ti=document.createElement('input');ti.type='text';ti.value=lbl.text;
+  const tl=document.createElement('label');tl.className='fl';tl.textContent=t('lbl_text');
+  const ti=document.createElement('input');
+  ti.type='text'; ti.id='ed-text'; ti.value=lbl.text;
   const fobj=FONTS.find(f=>f.id===lbl.fontId)||FONTS[0];
-  ti.style.fontFamily=fobj.fam;ti.dir=fobj.ar?'rtl':'ltr';
-  ti.oninput=e=>{lbl.text=e.target.value;renderLabelList();redrw();};
-  textDiv.appendChild(tl);textDiv.appendChild(ti);
+  ti.style.fontFamily=fobj.fam; ti.dir=fobj.ar?'rtl':'ltr';
+  // oninput: update state + canvas ONLY — never rebuild DOM
+  ti.addEventListener('input',e=>{
+    lbl.text=e.target.value;
+    renderLabelList();
+    redrawCanvas(); // lightweight: only repaints canvas
+  });
+  textDiv.appendChild(tl); textDiv.appendChild(ti);
   ed.appendChild(textDiv);
 
   // ── FONT SIZE ──
   const fsDiv=document.createElement('div');
-  const fsl=document.createElement('label');fsl.className='fl';fsl.setAttribute('data-i','lbl_fontsize');fsl.textContent=t('lbl_fontsize');
+  const fsl=document.createElement('label');fsl.className='fl';fsl.textContent=t('lbl_fontsize');
   const fsr=document.createElement('div');fsr.className='sr';
-  const fsSlider=document.createElement('input');fsSlider.type='range';fsSlider.min=5;fsSlider.max=30;fsSlider.value=lbl.fontSize;
-  const fsVt=document.createElement('span');fsVt.className='vt';fsVt.textContent=lbl.fontSize;
-  fsSlider.oninput=()=>{lbl.fontSize=+fsSlider.value;fsVt.textContent=fsSlider.value;renderLabelList();redrw();};
+  const fsSlider=document.createElement('input');fsSlider.type='range';fsSlider.id='ed-fs';
+  fsSlider.min=5;fsSlider.max=30;fsSlider.value=lbl.fontSize;
+  const fsVt=document.createElement('span');fsVt.className='vt';fsVt.id='ed-fsv';fsVt.textContent=lbl.fontSize;
+  fsSlider.addEventListener('input',()=>{lbl.fontSize=+fsSlider.value;fsVt.textContent=fsSlider.value;renderLabelList();redrawCanvas();});
   fsr.appendChild(fsSlider);fsr.appendChild(fsVt);
   fsDiv.appendChild(fsl);fsDiv.appendChild(fsr);ed.appendChild(fsDiv);
 
   // ── OPACITY ──
   const opDiv=document.createElement('div');
-  const opl=document.createElement('label');opl.className='fl';opl.setAttribute('data-i','lbl_opacity');opl.textContent=t('lbl_opacity');
+  const opl=document.createElement('label');opl.className='fl';opl.textContent=t('lbl_opacity');
   const opr=document.createElement('div');opr.className='sr';
-  const opSlider=document.createElement('input');opSlider.type='range';opSlider.min=10;opSlider.max=100;opSlider.value=Math.round(lbl.opacity*100);opSlider.style.accentColor='var(--red)';
-  const opVt=document.createElement('span');opVt.className='vt';opVt.textContent=Math.round(lbl.opacity*100)+'%';
-  opSlider.oninput=()=>{lbl.opacity=+opSlider.value/100;opVt.textContent=opSlider.value+'%';redrw();};
+  const opSlider=document.createElement('input');opSlider.type='range';opSlider.id='ed-op';
+  opSlider.min=10;opSlider.max=100;opSlider.value=Math.round(lbl.opacity*100);opSlider.style.accentColor='var(--red)';
+  const opVt=document.createElement('span');opVt.className='vt';opVt.id='ed-opv';opVt.textContent=Math.round(lbl.opacity*100)+'%';
+  opSlider.addEventListener('input',()=>{lbl.opacity=+opSlider.value/100;opVt.textContent=opSlider.value+'%';redrawCanvas();});
   opr.appendChild(opSlider);opr.appendChild(opVt);
   opDiv.appendChild(opl);opDiv.appendChild(opr);ed.appendChild(opDiv);
 
   // ── FONT ──
-  const fontSec=makeSec(t('sec_font'));ed.appendChild(fontSec);
-  const fg=document.createElement('div');fg.className='fgrid';
+  ed.appendChild(makeSec(t('sec_font')));
+  const fg=document.createElement('div');fg.className='fgrid';fg.id='ed-fgrid';
   FONTS.forEach(f=>{
     const c=document.createElement('div');c.className='fc'+(lbl.fontId===f.id?' on':'');
+    c.dataset.fontId=f.id;
     const pv=document.createElement('div');pv.className='fp';pv.style.fontFamily=f.fam;pv.style.direction=f.ar?'rtl':'ltr';pv.textContent=f.prev;
     const nm=document.createElement('div');nm.className='fn';nm.textContent=f.lbl;
     c.appendChild(pv);c.appendChild(nm);
-    c.onclick=()=>{lbl.fontId=f.id;ti.style.fontFamily=f.fam;ti.dir=f.ar?'rtl':'ltr';renderLabelList();renderEditor();redrw();};
+    c.addEventListener('click',()=>{
+      lbl.fontId=f.id;
+      const inp=document.getElementById('ed-text');
+      if(inp){inp.style.fontFamily=f.fam;inp.dir=f.ar?'rtl':'ltr';}
+      // update font card highlights without rebuilding
+      document.querySelectorAll('#ed-fgrid .fc').forEach(el=>el.classList.toggle('on',el.dataset.fontId===f.id));
+      renderLabelList();redrawCanvas();
+    });
     fg.appendChild(c);
   });
   ed.appendChild(fg);
 
   // ── STYLE ──
-  const styleSec=makeSec(t('sec_style'));ed.appendChild(styleSec);
-  const sg=document.createElement('div');sg.className='sgrid';
+  ed.appendChild(makeSec(t('sec_style')));
+  const sg=document.createElement('div');sg.className='sgrid';sg.id='ed-sgrid';
   STYLES_DEF.forEach(st=>{
     const c=document.createElement('div');c.className='sc'+(lbl.style===st.id?' on':'');
+    c.dataset.styleId=st.id;
     const sp=document.createElement('div');sp.className='sp';
     const cv=document.createElement('canvas');cv.width=50;cv.height=24;
     const ctx=cv.getContext('2d');
@@ -690,20 +712,50 @@ function renderEditor(){
     sp.appendChild(cv);
     const nm=document.createElement('div');nm.className='sn';nm.textContent=t(st.nk);
     c.appendChild(sp);c.appendChild(nm);
-    c.onclick=()=>{lbl.style=st.id;renderLabelList();renderEditor();redrw();};
+    c.addEventListener('click',()=>{
+      lbl.style=st.id;
+      document.querySelectorAll('#ed-sgrid .sc').forEach(el=>el.classList.toggle('on',el.dataset.styleId===st.id));
+      renderLabelList();redrawCanvas();
+    });
     sg.appendChild(c);
   });
   ed.appendChild(sg);
 
   // ── COLORS ──
   ed.appendChild(makeSec(t('sec_rectcol')));
-  ed.appendChild(makeSwatches(RP,lbl,'rectColor',()=>{renderLabelList();renderEditor();redrw();}));
+  ed.appendChild(makeSwatches(RP,lbl,'rectColor',()=>{renderLabelList();redrawCanvas();},'ed-sw-rc'));
   ed.appendChild(makeSec(t('sec_textcol')));
-  ed.appendChild(makeSwatches(TP,lbl,'textColor',()=>{renderLabelList();renderEditor();redrw();}));
+  ed.appendChild(makeSwatches(TP,lbl,'textColor',()=>{renderLabelList();redrawCanvas();},'ed-sw-tc'));
   ed.appendChild(makeSec(t('sec_bordcol')));
-  ed.appendChild(makeSwatches(BP,lbl,'bordColor',()=>{renderLabelList();renderEditor();redrw();}));
+  ed.appendChild(makeSwatches(BP,lbl,'bordColor',()=>{renderLabelList();redrawCanvas();},'ed-sw-bc'));
 
   wrap.appendChild(ed);
+}
+
+// Lightweight: just update .on states and slider values without touching the input
+function refreshEditorState(lbl){
+  const ti=document.getElementById('ed-text');
+  // Only update value if input doesn't currently have focus (user is not typing)
+  if(ti && document.activeElement!==ti) ti.value=lbl.text;
+  const fs=document.getElementById('ed-fs');const fsv=document.getElementById('ed-fsv');
+  if(fs&&document.activeElement!==fs){fs.value=lbl.fontSize;if(fsv)fsv.textContent=lbl.fontSize;}
+  const op=document.getElementById('ed-op');const opv=document.getElementById('ed-opv');
+  if(op&&document.activeElement!==op){op.value=Math.round(lbl.opacity*100);if(opv)opv.textContent=Math.round(lbl.opacity*100)+'%';}
+  document.querySelectorAll('#ed-fgrid .fc').forEach(el=>el.classList.toggle('on',el.dataset.fontId===lbl.fontId));
+  document.querySelectorAll('#ed-sgrid .sc').forEach(el=>el.classList.toggle('on',el.dataset.styleId===lbl.style));
+}
+
+// redrawCanvas: only repaints the overlay, no DOM changes
+function redrawCanvas(){
+  const oc=document.getElementById('oc');
+  if(!oc.width)return;
+  const ctx=oc.getContext('2d');
+  ctx.clearRect(0,0,oc.width,oc.height);
+  const inactive=S.labels.filter(l=>l.id!==S.activeLabel);
+  const active=S.labels.find(l=>l.id===S.activeLabel);
+  inactive.forEach(l=>drawLabelOnCanvas(ctx,l,ptW,ptH,canvasScale,false));
+  if(active)drawLabelOnCanvas(ctx,active,ptW,ptH,canvasScale,true);
+  syncPosInputs();
 }
 
 function makeSec(txt){
@@ -724,12 +776,13 @@ function drawStylePreview(ctx,x,y,rw,rh,ph,pv,txt,fsPx,style,rc,tc,bc,fontId){
   ctx.restore();
 }
 
-function makeSwatches(presets,lbl,key,cb){
+function makeSwatches(presets,lbl,key,cb,rowId){
   const row=document.createElement('div');row.className='crow';
+  if(rowId) row.id=rowId;
   presets.forEach(col=>{
     const s=document.createElement('div');s.className='sw';s.style.background=rgb2h(col);
     s.classList.toggle('on',JSON.stringify(lbl[key])===JSON.stringify(col));
-    s.onclick=()=>{lbl[key]=deepCopy(col);cb();};
+    s.addEventListener('click',()=>{lbl[key]=deepCopy(col);cb();});
     row.appendChild(s);
   });
   const cw=document.createElement('div');cw.className='cw';
